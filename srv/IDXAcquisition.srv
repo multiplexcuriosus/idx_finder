@@ -1,0 +1,6 @@
+#request fields
+string target_spice
+---
+#response fields
+bool success
+int8 idx
