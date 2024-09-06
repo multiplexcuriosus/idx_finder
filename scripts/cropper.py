@@ -12,13 +12,14 @@ class Cropper:
         self.image_hor_crop = 190
         self.padding = 40
         
-
+        '''
         lower_x = 479-self.image_vert_crop
         lower_y = 639-self.image_hor_crop
         cropped[0:479,0:self.image_hor_crop,:] = 0 
         cropped[0:479,lower_y:639,:] = 0 
         cropped[0:self.image_vert_crop,0:639,:] = 0 
         cropped[lower_x:479,0:639,:] = 0 
+        '''
         self.col_cropped = cropped
 
          # Debug imgs

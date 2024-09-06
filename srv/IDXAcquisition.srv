@@ -1,5 +1,7 @@
 #request fields
 string target_spice
+sensor_msgs/Image mask
+sensor_msgs/Image color_frame
 ---
 #response fields
 bool success
