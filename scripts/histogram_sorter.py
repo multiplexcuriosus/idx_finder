@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
 
-class HistogramLocalizer:
+class HistogramSorter:
 
     def __init__(self,voc0_cropped,voc1_cropped) -> None:
         
