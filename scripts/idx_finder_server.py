@@ -21,6 +21,8 @@ class IDXFinder:
 
         self.use_ocr = True
 
+        self.debug_imgs_path="/home/jau/ros/catkin_ws/src/idx_finder/debug_imgs/"
+
         self._bridge = CvBridge()
         self.load_params()
 
@@ -97,7 +99,8 @@ class IDXFinder:
 
         original_mask_cv = self.ros_to_cv2(request.mask,desired_encoding="passthrough").astype(np.uint8)
         original_mask_cv = cv2.cvtColor(original_mask_cv,cv2.COLOR_BGR2GRAY)
-        cv2.imwrite("./original_mask_cv.png",original_mask_cv)
+        img_path = self.debug_imgs_path + "original_mask_cv.png"
+        cv2.imwrite(img_path,original_mask_cv)
         print("mask_cv shape: "+str(original_mask_cv.shape))
         
 
@@ -109,15 +112,19 @@ class IDXFinder:
         cv2.drawContours(orignal_mask_bgr,[c0],0,(0,255,0),-1)
         og_mask_hsv = cv2.cvtColor(orignal_mask_bgr, cv2.COLOR_BGR2HSV)
         mask_no_holes =  cv2.inRange(og_mask_hsv,np.array([50,0,0]),np.array([70,255,255]))
-        cv2.imwrite("./mask_no_holes.png",mask_no_holes)
+        
+        img_path = self.debug_imgs_path + "mask_no_holes.png"
+        cv2.imwrite(img_path,mask_no_holes)
 
         # Create inv og mask --> inv of shelf
         og_mask_inv = cv2.bitwise_not(original_mask_cv)
-        cv2.imwrite("./og_mask_inv.png",og_mask_inv)
+        img_path = self.debug_imgs_path + "og_mask_inv.png"
+        cv2.imwrite(img_path,og_mask_inv)
 
         # Create all-bottles-mask
         all_mask = cv2.bitwise_and(mask_no_holes,og_mask_inv)
-        cv2.imwrite("./all_mask.png",all_mask)
+        img_path = self.debug_imgs_path + "all_mask.png"
+        cv2.imwrite(img_path,all_mask)
 
 
 

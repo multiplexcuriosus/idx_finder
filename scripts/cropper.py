@@ -30,10 +30,12 @@ class Cropper:
         self.voc0_img = None
         self.voc1_img = None
         self.blob_img = None
+        self.debug_imgs_path="/home/jau/ros/catkin_ws/src/idx_finder/debug_imgs/"
 
         self.debug = True
         if self.debug:
-            cv2.imwrite("./cropper_input_img.png",img)
+            img_path = self.debug_imgs_path + "cropper_input_img.png"
+            cv2.imwrite(img_path,img)
 
         #hsv_img_og = cv2.cvtColor(self.col_cropped, cv2.COLOR_RGB2HSV)
 
@@ -41,17 +43,20 @@ class Cropper:
         #all_range = np.array([[0, 0, 50], [180, 255, 255]], dtype=np.uint16)
         #all_mask = cv2.inRange(hsv_img_og, all_range[0], all_range[1])
         if self.debug:
-            cv2.imwrite("./All mask.png",all_mask)
+            img_path = self.debug_imgs_path + "all_mask.png"
+            cv2.imwrite(img_path,all_mask)
 
         # All mask clean
         self.all_mask_clean = self.clean_mask(all_mask)
         if self.debug:
-            cv2.imwrite("./All mask clean.png",self.all_mask_clean)
+            img_path = self.debug_imgs_path + "all_mask_clean.png"
+            cv2.imwrite(img_path,self.all_mask_clean)
 
         # All color
         all_color = cv2.bitwise_and(img, img, mask=self.all_mask_clean)
         if self.debug:
-            cv2.imwrite("./All color.png",all_color)
+            img_path = self.debug_imgs_path + "all_color.png"
+            cv2.imwrite(img_path,all_color)
 
         '''
         if self.debug:
@@ -93,15 +98,18 @@ class Cropper:
             cv2.circle(blobs_bgr,self.c2_center,5,(255,0,0),-1)
             cv2.circle(blobs_bgr,self.centroid,5,(0,0,255),-1)
             self.blob_img = blobs_bgr
-            cv2.imwrite("./blob_img.png",blobs_bgr)
+            img_path = self.debug_imgs_path + "blobs_bgr.png"
+            cv2.imwrite(img_path,blobs_bgr)
             #cv2.imshow('Blobs', blobs_bgr)
 
         # Mask detection
         vom0 = self.get_cont_mask(c0)
         vom1 = self.get_cont_mask(c1)
         if self.debug:
-            cv2.imwrite("./VOM 1.png",vom1)
-            cv2.imwrite("./VOM 0.png",vom0)
+            img_path = self.debug_imgs_path + "vom1.png"
+            cv2.imwrite(img_path,vom1)
+            img_path = self.debug_imgs_path + "vom0.png"
+            cv2.imwrite(img_path,vom0)
             #cv2.waitKey(0)
 
 
@@ -109,8 +117,10 @@ class Cropper:
         voc0 = cv2.bitwise_and(img, img, mask=vom0)
         voc1 = cv2.bitwise_and(img, img, mask=vom1)
         if self.debug:
-            cv2.imwrite("./VOC 1.png",voc1)
-            cv2.imwrite("./VOC 0.png",voc0)
+            img_path = self.debug_imgs_path + "voc1.png"
+            cv2.imwrite(img_path,voc1)
+            img_path = self.debug_imgs_path + "voc0.png"
+            cv2.imwrite(img_path,voc0)
             #cv2.waitKey(0)
         # Get color cropped
         voc0_cropped = self.get_color_cropped(c0,voc0)
@@ -119,8 +129,10 @@ class Cropper:
         self.voc1_img = voc1_cropped
 
         if self.debug:
-            cv2.imwrite("./VOC0 cropped.png",voc0_cropped)
-            cv2.imwrite("./VOC1 cropped.png",voc1_cropped)
+            img_path = self.debug_imgs_path + "voc0_cropped.png"
+            cv2.imwrite(img_path,voc0_cropped)
+            img_path = self.debug_imgs_path + "voc1_cropped.png"
+            cv2.imwrite(img_path,voc1_cropped)
             #cv2.waitKey(0)
 
         self.status = "success"
