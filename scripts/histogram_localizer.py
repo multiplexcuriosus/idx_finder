@@ -7,6 +7,10 @@ class HistogramLocalizer:
 
     def __init__(self,voc0_cropped,voc1_cropped) -> None:
         
+        if voc0_cropped is None or voc1_cropped is None:
+            print("HL: ERROR: img is None")
+            return
+
         self.debug = False
 
         # Vinegar/Oil hue hist

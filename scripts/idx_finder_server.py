@@ -37,6 +37,7 @@ class IDXFinder:
         self.debug_histogram_pub = rospy.Publisher("debug_histogram", Image, queue_size=1)
         self.debug_voc0_pub = rospy.Publisher("debug_voc0", Image, queue_size=1)
         self.debug_voc1_pub = rospy.Publisher("debug_voc1", Image, queue_size=1)
+        self.debug_blob_pub = rospy.Publisher("debug_blob", Image, queue_size=1)
         
         # Set up time synchronizer
         #ts = message_filters.TimeSynchronizer([color_img_sub], 10)
@@ -58,9 +59,9 @@ class IDXFinder:
             print(e)
     '''
     
-    def update_croppings(self,color_frame):
+    def update_croppings(self,color_frame,all_mask):
         # Update cropped images
-        self.cropper = Cropper(color_frame)
+        self.cropper = Cropper(color_frame,all_mask)
         if self.cropper.status == "success":
             cv2.imwrite(self.voc0_img_path,self.cropper.voc0_img)
             cv2.imwrite(self.voc1_img_path,self.cropper.voc1_img)
@@ -77,11 +78,13 @@ class IDXFinder:
             self.debug_col_pub.publish(self._bridge.cv2_to_imgmsg(self.cropper.col_cropped,encoding="rgb8"))
 
             if self.cropper.voc0_img is not None:
-                
                 self.debug_voc0_pub.publish(self._bridge.cv2_to_imgmsg(self.cropper.voc0_img,encoding="rgb8"))
             
             if self.cropper.voc1_img is not None:
                 self.debug_voc1_pub.publish(self._bridge.cv2_to_imgmsg(self.cropper.voc1_img,encoding="rgb8"))
+                #self.debug_all_mask_pub.publish(self.bridge.cv2_to_imgmsg(self.all_mask,encoding="passthrough"))
+            if self.cropper.blob_img is not None:
+                self.debug_blob_pub.publish(self._bridge.cv2_to_imgmsg(self.cropper.blob_img,encoding="rgb8"))
                 #self.debug_all_mask_pub.publish(self.bridge.cv2_to_imgmsg(self.all_mask,encoding="passthrough"))
 
     def ros_to_cv2(self, frame: Image, desired_encoding="bgr8"):
@@ -92,17 +95,39 @@ class IDXFinder:
         target = request.target_spice
         print("[IDXFinder] : Received request for:", target)
 
-        mask_cv = self.ros_to_cv2(request.mask,desired_encoding="passthrough").astype(np.uint8)
-        mask_cv = cv2.cvtColor(mask_cv,cv2.COLOR_BGR2GRAY)
-        print("mask_cv shape: "+str(mask_cv.shape))
+        original_mask_cv = self.ros_to_cv2(request.mask,desired_encoding="passthrough").astype(np.uint8)
+        original_mask_cv = cv2.cvtColor(original_mask_cv,cv2.COLOR_BGR2GRAY)
+        cv2.imwrite("./original_mask_cv.png",original_mask_cv)
+        print("mask_cv shape: "+str(original_mask_cv.shape))
         
+
+        # Create mask with no holes
+        orignal_mask_bgr = cv2.cvtColor(original_mask_cv,cv2.COLOR_GRAY2BGR)
+        contours, hier = cv2.findContours(original_mask_cv,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+        cntsSorted = sorted(contours, key=lambda x: -cv2.contourArea(x))
+        c0 = cntsSorted[0] # largest contour
+        cv2.drawContours(orignal_mask_bgr,[c0],0,(0,255,0),-1)
+        og_mask_hsv = cv2.cvtColor(orignal_mask_bgr, cv2.COLOR_BGR2HSV)
+        mask_no_holes =  cv2.inRange(og_mask_hsv,np.array([50,0,0]),np.array([70,255,255]))
+        cv2.imwrite("./mask_no_holes.png",mask_no_holes)
+
+        # Create inv og mask --> inv of shelf
+        og_mask_inv = cv2.bitwise_not(original_mask_cv)
+        cv2.imwrite("./og_mask_inv.png",og_mask_inv)
+
+        # Create all-bottles-mask
+        all_mask = cv2.bitwise_and(mask_no_holes,og_mask_inv)
+        cv2.imwrite("./all_mask.png",all_mask)
+
+
+
         #mask_cv = np.array(mask_cv,dtype="uint16")
         #(thresh, mask_cv) = cv2.threshold(mask_cv, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
         color_frame = self.ros_to_cv2(request.color_frame)
         print("color_frame.shape: "+str(color_frame.shape))
-        color_frame = cv2.bitwise_and(color_frame, color_frame, mask=mask_cv)
+        #color_frame = cv2.bitwise_and(color_frame, color_frame, mask=original_mask_cv)
 
-        self.update_croppings(color_frame)
+        self.update_croppings(color_frame,all_mask)
         
         # Prepare response
         response = IDXAcquisitionResponse()
@@ -164,16 +189,16 @@ class IDXFinder:
 
                 # Vinegar/Oil classification decision
                 if HL.voc0_has_higher_hue_peak:
-                    oil_com = self.cropper.c0_center
-                    vinegar_com = self.cropper.c1_center
-                elif HL.voc1_has_higher_hue_peak:
                     oil_com = self.cropper.c1_center
                     vinegar_com = self.cropper.c0_center
+                elif HL.voc1_has_higher_hue_peak:
+                    oil_com = self.cropper.c0_center
+                    vinegar_com = self.cropper.c1_center
                 else:
                     print("Same peak x --> deciding via mean")
                     if HL.voc0_has_higher_hue_mean:
-                        oil_com = self.cropper.c0_center
-                        vinegar_com = self.cropper.c1_center
+                        oil_com = self.cropper.c1_center
+                        vinegar_com = self.cropper.c0_center
                     elif HL.voc1_has_higher_hue_mean:
                         oil_com = self.cropper.c1_center
                         vinegar_com = self.cropper.c0_center

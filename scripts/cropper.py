@@ -2,9 +2,12 @@ import numpy as np
 import cv2
 
 class Cropper:
-    def __init__(self,img) -> None:
+    def __init__(self,img,all_mask) -> None:
 
         cropped = img.copy()
+        if img is None:
+            print("Cropper: ERROR: img is None")
+            return
 
         self.status = "FAIL"
 
@@ -26,29 +29,35 @@ class Cropper:
         self.hist_img = None
         self.voc0_img = None
         self.voc1_img = None
+        self.blob_img = None
 
-        self.debug = False
+        self.debug = True
+        if self.debug:
+            cv2.imwrite("./cropper_input_img.png",img)
 
-        hsv_img_og = cv2.cvtColor(self.col_cropped, cv2.COLOR_RGB2HSV)
+        #hsv_img_og = cv2.cvtColor(self.col_cropped, cv2.COLOR_RGB2HSV)
 
         # All mask
-        all_range = np.array([[0, 0, 30], [180, 255, 255]], dtype=np.uint16)
-        all_mask = cv2.inRange(hsv_img_og, all_range[0], all_range[1])
+        #all_range = np.array([[0, 0, 50], [180, 255, 255]], dtype=np.uint16)
+        #all_mask = cv2.inRange(hsv_img_og, all_range[0], all_range[1])
         if self.debug:
-            cv2.imshow("All mask",all_mask)
+            cv2.imwrite("./All mask.png",all_mask)
 
         # All mask clean
         self.all_mask_clean = self.clean_mask(all_mask)
         if self.debug:
-            cv2.imshow("All mask clean",self.all_mask_clean)
+            cv2.imwrite("./All mask clean.png",self.all_mask_clean)
 
         # All color
         all_color = cv2.bitwise_and(img, img, mask=self.all_mask_clean)
         if self.debug:
-            cv2.imshow("All color",all_color)
+            cv2.imwrite("./All color.png",all_color)
 
+        '''
         if self.debug:
             cv2.waitKey(0)
+         '''
+
 
         # Blob detection
         blobs_bgr = cv2.cvtColor(self.all_mask_clean, cv2.COLOR_GRAY2BGR)
@@ -75,7 +84,7 @@ class Cropper:
         self.voc2_idx = self.locate(self.c2_center)
         self.occupied_idxs = list([self.voc0_idx,self.voc1_idx,self.voc2_idx])
 
-        if self.debug:
+        if self.debug or True:
             cv2.drawContours(blobs_bgr,[c0],0,(0,255,0),2)
             cv2.circle(blobs_bgr,self.c0_center,5,(255,0,0),-1)
             cv2.drawContours(blobs_bgr,[c1],0,(0,255,0),2)
@@ -83,23 +92,26 @@ class Cropper:
             cv2.drawContours(blobs_bgr,[c2],0,(0,255,0),2)
             cv2.circle(blobs_bgr,self.c2_center,5,(255,0,0),-1)
             cv2.circle(blobs_bgr,self.centroid,5,(0,0,255),-1)
-            cv2.imshow('Blobs', blobs_bgr)
+            self.blob_img = blobs_bgr
+            cv2.imwrite("./blob_img.png",blobs_bgr)
+            #cv2.imshow('Blobs', blobs_bgr)
 
         # Mask detection
         vom0 = self.get_cont_mask(c0)
         vom1 = self.get_cont_mask(c1)
-        if self.debug and False:
-            cv2.imshow("VOM 1",vom1)
-            cv2.imshow("VOM 0",vom0)
+        if self.debug:
+            cv2.imwrite("./VOM 1.png",vom1)
+            cv2.imwrite("./VOM 0.png",vom0)
+            #cv2.waitKey(0)
 
 
         # Get color_img
         voc0 = cv2.bitwise_and(img, img, mask=vom0)
         voc1 = cv2.bitwise_and(img, img, mask=vom1)
         if self.debug:
-            cv2.imshow("VOC 1",voc1)
-            cv2.imshow("VOC 0",voc0)
-
+            cv2.imwrite("./VOC 1.png",voc1)
+            cv2.imwrite("./VOC 0.png",voc0)
+            #cv2.waitKey(0)
         # Get color cropped
         voc0_cropped = self.get_color_cropped(c0,voc0)
         self.voc0_img = voc0_cropped
@@ -107,8 +119,9 @@ class Cropper:
         self.voc1_img = voc1_cropped
 
         if self.debug:
-            cv2.imshow("VOC0 cropped",voc0_cropped)
-            cv2.imshow("VOC1 cropped",voc1_cropped)
+            cv2.imwrite("./VOC0 cropped.png",voc0_cropped)
+            cv2.imwrite("./VOC1 cropped.png",voc1_cropped)
+            #cv2.waitKey(0)
 
         self.status = "success"
 

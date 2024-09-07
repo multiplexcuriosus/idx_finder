@@ -6,8 +6,9 @@ class OCRLocalizer:
         self.result = self.reader.readtext(img_path)
         self.found_tokens = {}
 
-        self.oil_dict = ["OIL","OI","IL"]
-        self.vinegar_dict = ["VI","IN","NE","EG","GA","AR",
+        self.oil_dict = ["OIL","OI","IL","O"]
+        self.vinegar_dict = ["V","G","A","R",
+                             "VI","IN","NE","EG","GA","AR",
                              "VIN","INE","NEG","EGA","GAR",
                              "VINE","INEG","NEGA","EGAR",
                              "VINEG","INEGA","NEGAR",
@@ -31,8 +32,8 @@ class OCRLocalizer:
                 otl = ot.lower()
                 if ftl == otl or ftl in otl or otl in ftl:
                     p = self.found_tokens[ft]
-                    print("Oil token found: "+str(ft)+" with p="+"%.2f" % p)
                     if p > p_thresh:
+                        print("Oil token found: "+str(ft)+" with p="+"%.2f" % p)
                         self.status = "oil"
                         return
         
@@ -44,8 +45,8 @@ class OCRLocalizer:
                     ftl = ft.lower()
                     if vtl == ftl or ftl in vtl or vtl in ftl:
                         p = self.found_tokens[ft]
-                        print("Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
                         if p > p_thresh:
+                            print("Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
                             self.status = "vinegar"
                             return
 
