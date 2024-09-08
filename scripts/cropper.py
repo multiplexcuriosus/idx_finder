@@ -4,7 +4,7 @@ from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 
 class Cropper:
-    def __init__(self,og_color,og_mask) -> None:
+    def __init__(self,og_color,og_mask,five_contours_found) -> None:
         
         # Init params
         self.init()
@@ -21,28 +21,29 @@ class Cropper:
             print("Cropper: ERROR: depth img  is None")
             return
 
-        # Create all-bottles-mask
-        #og_mask = cv2.cvtColor(og_mask,cv2.COLOR_BGR2GRAY)
-        all_bottles_mask = self.get_all_mask(og_mask)
+         # Create all-bottles-mask
+        all_bottles_mask = None
+        if five_contours_found:
+            print("[IDXServer.Croppper] : Using 5-contour-approach")
+            all_bottles_mask = self.get_all_mask(og_mask)
+        else:
+            print("[IDXServer.Croppper] : Using thresh-approach")
+            og_color_hsv = cv2.cvtColor(og_color, cv2.COLOR_RGB2HSV)
+            all_range = np.array([[0, 0, 200], [180, 255, 255]], dtype=np.uint16)
+            all_bottles_mask = cv2.inRange(og_color_hsv, all_range[0], all_range[1])
+            all_bottles_mask = cv2.bitwise_and(all_bottles_mask, all_bottles_mask, mask=og_mask)
+
+       
         self.all_bottles_mask = self.clean_mask(all_bottles_mask)
 
         # All color
         all_bottles_color = cv2.bitwise_and(og_color, og_color, mask=self.all_bottles_mask)
 
         # Blob detection
-        blobs_bgr = cv2.cvtColor(self.all_bottles_mask, cv2.COLOR_GRAY2BGR)
+        self.blobs_bgr = cv2.cvtColor(self.all_bottles_mask, cv2.COLOR_GRAY2BGR)
         contours, hier = cv2.findContours(self.all_bottles_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
-        # Count submasks in shelf mask
-        num_cont = len(contours)
-        print("[IDXServer.Croppper] : Found %s countours" % num_cont)
-    
-        if num_cont < 3:
-            print("[IDXServer.Croppper] : Switching to thresh approach...")
-            # ...TODO
-            return 
-
-        # Assume 4 countours were found
+        # Contour processing
         cntsSorted = sorted(contours, key=lambda x: -cv2.contourArea(x))
 
         c0 = cntsSorted[0] # largest contour
@@ -75,7 +76,7 @@ class Cropper:
         spice_img_dict = {0: self.get_col_cropped(cntsSorted,og_color,0),
                           1: self.get_col_cropped(cntsSorted,og_color,1),
                           2: self.get_col_cropped(cntsSorted,og_color,2),
-                          3: self.get_col_cropped(cntsSorted,og_color,3),}
+                          3: self.get_col_cropped(cntsSorted,og_color,3)}
 
         # Brightness histogram expectation value for each spice
         bhist_evs = [(self.get_brightness_exp_val(spice_img_dict,0),0),
@@ -136,9 +137,6 @@ class Cropper:
             cv2.imwrite(img_path,hist_img)
         '''
 
-        # DONE -------------------------------------------
-
-
         # debug:
         if self.debug:
             img_path = self.debug_imgs_path + 'og_color.png'
@@ -153,26 +151,23 @@ class Cropper:
             img_path = self.debug_imgs_path + 'all_color.png'
             cv2.imwrite(img_path,all_bottles_color)
 
-            cv2.drawContours(blobs_bgr,[c0],0,(0,255,0),2)
-            cv2.circle(blobs_bgr,c0_center,5,(255,0,0),-1)
-            cv2.drawContours(blobs_bgr,[c1],0,(0,255,0),2)
-            cv2.circle(blobs_bgr,c1_center,5,(255,0,0),-1)
-            cv2.drawContours(blobs_bgr,[c2],0,(0,255,0),2)
-            cv2.circle(blobs_bgr,c2_center,5,(255,0,0),-1)
-            cv2.drawContours(blobs_bgr,[c3],0,(0,255,0),2)
-            cv2.circle(blobs_bgr,c3_center,5,(255,0,0),-1)
-            cv2.circle(blobs_bgr,self.centroid,5,(0,0,255),-1)
+
+    def four_contours_approach(self,contours,og_color):
+        
+
+        # DONE -------------------------------------------
+        if self.debug:
+            cv2.drawContours(self.blobs_bgr,[c0],0,(0,255,0),2)
+            cv2.circle(self.blobs_bgr,c0_center,5,(255,0,0),-1)
+            cv2.drawContours(self.blobs_bgr,[c1],0,(0,255,0),2)
+            cv2.circle(self.blobs_bgr,c1_center,5,(255,0,0),-1)
+            cv2.drawContours(self.blobs_bgr,[c2],0,(0,255,0),2)
+            cv2.circle(self.blobs_bgr,c2_center,5,(255,0,0),-1)
+            cv2.drawContours(self.blobs_bgr,[c3],0,(0,255,0),2)
+            cv2.circle(self.blobs_bgr,c3_center,5,(255,0,0),-1)
+            cv2.circle(self.blobs_bgr,self.centroid,5,(0,0,255),-1)
             img_path = self.debug_imgs_path + 'blobs_bgr.png'
-            cv2.imwrite(img_path,blobs_bgr)
-
-
-
-
-        # emergency plan
-        #hsv_img_og = cv2.cvtColor(self.col_cropped, cv2.COLOR_RGB2HSV)
-        # All mask
-        #all_range = np.array([[0, 0, 50], [180, 255, 255]], dtype=np.uint16)
-        #all_mask = cv2.inRange(hsv_img_og, all_range[0], all_range[1])
+            cv2.imwrite(img_path,self.blobs_bgr)
 
 
     def get_col_cropped(self,contours,og_color,idx):
@@ -234,7 +229,7 @@ class Cropper:
 
         self.quadrant_dict = {}
 
-        self.ov_idxs = None
+        self.ov_idxs = None # Oil vinegar idx
 
         # Debug imgs
         self.hist_img = None
@@ -264,13 +259,12 @@ class Cropper:
         img_path = self.debug_imgs_path + 'mask_no_holes.png'
         cv2.imwrite(img_path,mask_no_holes)
 
-
         # Create inv og mask --> inv of shelf
         og_mask_inv = cv2.bitwise_not(mask)
         img_path = self.debug_imgs_path + 'og_mask_inv.png'
         cv2.imwrite(img_path,og_mask_inv)
 
-        
+        # Use inv mask and no holes mask to create mask where only four bottles are visible
         all_mask = cv2.bitwise_and(mask_no_holes,og_mask_inv)
         img_path = self.debug_imgs_path + 'all_mask.png'
         cv2.imwrite(img_path,all_mask)

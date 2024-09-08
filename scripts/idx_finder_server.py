@@ -87,6 +87,7 @@ class IDXFinder:
         response.idx = -1
 
         target = request.target_spice
+        target_mask_has_five_contours = request.has_five_contours
         print("[IDXFinder] : Received request for:", target)
 
         color_frame = self.ros_to_cv2(request.color_frame)
@@ -95,7 +96,7 @@ class IDXFinder:
             original_mask_cv = self.ros_to_cv2(request.mask,desired_encoding="passthrough").astype(np.uint8)
             original_mask_cv = cv2.cvtColor(original_mask_cv,cv2.COLOR_BGR2GRAY)
         
-            self.cropper = Cropper(color_frame,original_mask_cv)
+            self.cropper = Cropper(color_frame,original_mask_cv,target_mask_has_five_contours)
             self.cropper_init = True
             self.quadrant_dict = self.cropper.quadrant_dict
             print("[IDXFinder] : Cropper initialized")
