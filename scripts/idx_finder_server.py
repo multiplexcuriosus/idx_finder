@@ -4,7 +4,7 @@ import rospy
 import cv2
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
-import message_filters
+from std_msgs.msg import Bool
 
 from sensor_msgs.msg import Image
 from idx_finder.srv import IDXAcquisition, IDXAcquisitionResponse
@@ -28,6 +28,7 @@ class IDXFinder:
         self.voc1_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/last_voc1.png'
 
         # Set up callbacks
+        self.shutdown_sub = rospy.Subscriber("/shutdown_spice_up",Bool,self.shutdown_cb)
         #color_img_sub = message_filters.Subscriber(self.color_topic_name,Image, queue_size=1)
         
         # Debugging
@@ -46,28 +47,14 @@ class IDXFinder:
         # Start service
         self.service = rospy.Service("idx_finder_server", IDXAcquisition, self.service_request_callback)
 
-        print("[IDXFinder] : "+str("Initialized"))
-
-    '''
-    def synch_image_callback(self, color_msg):
-        try:
-            cv_color_img = self.bridge.imgmsg_to_cv2(color_msg).copy()
-            self.last_image_color = cv_color_img
-            #self.update_croppings(self.last_image_color)
-
-            test_path = self.debug_imgs_path +"all_mask_clean.png"
-            test_img = cv2.imread(test_path)
-            cv2.imshow("",test_img)
-            cv2.waitKey(0)
+        print("[IDXFinder] : Initialized")
 
 
-            img_path =  self.debug_imgs_path+'test.png'
-            print("im path: "+str(img_path))
-            cv2.imwrite(img_path,test_img)
+    def shutdown_cb(self,signal):
+        if signal.data:
+            print("[IDXFinder] : Shutting down")
+            rospy.signal_shutdown("Job done")
 
-        except CvBridgeError as e:
-            print(e)
-    '''
     
     def update_croppings(self):
         # Update cropped images
