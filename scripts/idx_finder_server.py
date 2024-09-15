@@ -97,6 +97,10 @@ class IDXFinder:
             original_mask_cv = cv2.cvtColor(original_mask_cv,cv2.COLOR_BGR2GRAY)
         
             self.cropper = Cropper(color_frame,original_mask_cv,target_mask_has_five_contours)
+            if self.cropper.status == "FAIL":
+                print("[IDXFinder] : Cropper failed. Aborting!")
+                return response
+            
             self.cropper_init = True
             self.quadrant_dict = self.cropper.quadrant_dict
             print("[IDXFinder] : Cropper initialized")
@@ -162,16 +166,13 @@ class IDXFinder:
                     oil_com = self.cropper.cA_center
                     vinegar_com = self.cropper.cB_center
                 else:
-                    print("Same peak x --> deciding via mean")
+                    print("Same hue peak location --> deciding via mean")
                     if HL.voc0_has_higher_hue_mean:
                         oil_com = self.cropper.cB_center
                         vinegar_com = self.cropper.cA_center
                     elif HL.voc1_has_higher_hue_mean:
                         oil_com = self.cropper.cA_center
                         vinegar_com = self.cropper.cB_center
-
-                    return response
-
 
             self.coms_dict["oil"] = oil_com
             self.coms_dict["vinegar"] = vinegar_com

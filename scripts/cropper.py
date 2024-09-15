@@ -42,6 +42,11 @@ class Cropper:
         # Blob detection
         self.blobs_bgr = cv2.cvtColor(self.all_bottles_mask, cv2.COLOR_GRAY2BGR)
         contours, hier = cv2.findContours(self.all_bottles_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+        # Abort if no contours found        
+        if len(contours) == 0:
+            print("[IDXServer.Croppper] : No contours found! Aborting")
+            return
+
 
         # Contour processing
         cntsSorted = sorted(contours, key=lambda x: -cv2.contourArea(x))
@@ -61,16 +66,23 @@ class Cropper:
         self.centroid = (int(np.average([c0_center[0],c1_center[0],c2_center[0],c3_center[0]])),
                          int(np.average([c0_center[1],c1_center[1],c2_center[1],c3_center[1]])))
 
-        self.spice0_idx = self.locate(c0_center)
-        self.spice1_idx = self.locate(c1_center)
-        self.spice2_idx = self.locate(c2_center)
-        self.spice3_idx = self.locate(c3_center)
+        self.spice0_loc_idx = self.locate(c0_center)
+        self.spice1_loc_idx = self.locate(c1_center)
+        self.spice2_loc_idx = self.locate(c2_center)
+        self.spice3_loc_idx = self.locate(c3_center)
 
-        # Key: spice, value: location
-        spiceidx_to_locidx = {0: self.spice0_idx,
-                             1: self.spice1_idx,
-                             2: self.spice2_idx,
-                             3: self.spice3_idx}
+        # Key: spice, value: location idx
+        spiceidx_to_locidx = {0: self.spice0_loc_idx,
+                              1: self.spice1_loc_idx,
+                              2: self.spice2_loc_idx,
+                              3: self.spice3_loc_idx}
+        print("spiceidx_to_locidx: "+str(spiceidx_to_locidx))
+        
+        # Key: spice, value: com
+        spiceidx_to_com = {0: c0_center,
+                           1: c1_center,
+                           2: c2_center,
+                           3: c3_center}
         
         # Cropped color imgs for each spice
         spice_img_dict = {0: self.get_col_cropped(cntsSorted,og_color,0),
@@ -84,9 +96,10 @@ class Cropper:
                      (self.get_brightness_exp_val(spice_img_dict,2),2),
                      (self.get_brightness_exp_val(spice_img_dict,3),3)]
 
+        print("bhist_evs: "+str(bhist_evs))
 
         bhist_evs_sorted = sorted(bhist_evs, key=lambda tu: tu[0])
-       
+        print("bhist_evs_sorted: "+str(bhist_evs_sorted))
 
         # Draw conclusions
         pepper_idx = spiceidx_to_locidx[bhist_evs_sorted[0][1]]
@@ -94,8 +107,6 @@ class Cropper:
 
         self.quadrant_dict["pepper"] = pepper_idx
         self.quadrant_dict["salt"] = salt_idx
-        print("pepper idx: "+str(pepper_idx))
-        print("salt_idx: "+str(salt_idx))
 
         self.status = "success"
 
@@ -116,26 +127,26 @@ class Cropper:
         cv2.imwrite(self.vocB_img_path,self.vocB_img)
 
         # Prepare contour centers for ocr
-        self.cA_center = spiceidx_to_locidx[vocA_idx]
-        self.cB_center = spiceidx_to_locidx[vocB_idx]
+        self.cA_center = spiceidx_to_com[vocA_idx]
+        self.cB_center = spiceidx_to_com[vocB_idx]
 
-        '''
+        
         if self.debug:
-            hist_img = self.createHistIMG(spice0_bhist,
-                                        spice1_bhist,
-                                        spice2_bhist,
-                                        spice3_bhist,
-                                        spice0_bhist_peak,
-                                        spice1_bhist_peak,
-                                        spice2_bhist_peak,
-                                        spice3_bhist_peak,
-                                        spice0_bhist_ev,
-                                        spice1_bhist_ev,
-                                        spice2_bhist_ev,
-                                        spice3_bhist_ev)
+            hist_img = self.createHistIMG(self.bhist_dict[0],
+                                          self.bhist_dict[1],
+                                          self.bhist_dict[2],
+                                          self.bhist_dict[3],
+                                          self.spice_bhist_peak_dict[0] ,
+                                          self.spice_bhist_peak_dict[1] ,
+                                          self.spice_bhist_peak_dict[2] ,
+                                          self.spice_bhist_peak_dict[3] ,
+                                          self.spice_bhist_ev_dict[0],
+                                          self.spice_bhist_ev_dict[1],
+                                          self.spice_bhist_ev_dict[2],
+                                          self.spice_bhist_ev_dict[3],)
             img_path = self.debug_imgs_path + 'hist_img.png'
             cv2.imwrite(img_path,hist_img)
-        '''
+        
 
         # debug:
         if self.debug:
@@ -150,24 +161,6 @@ class Cropper:
 
             img_path = self.debug_imgs_path + 'all_color.png'
             cv2.imwrite(img_path,all_bottles_color)
-
-
-    def four_contours_approach(self,contours,og_color):
-        
-
-        # DONE -------------------------------------------
-        if self.debug:
-            cv2.drawContours(self.blobs_bgr,[c0],0,(0,255,0),2)
-            cv2.circle(self.blobs_bgr,c0_center,5,(255,0,0),-1)
-            cv2.drawContours(self.blobs_bgr,[c1],0,(0,255,0),2)
-            cv2.circle(self.blobs_bgr,c1_center,5,(255,0,0),-1)
-            cv2.drawContours(self.blobs_bgr,[c2],0,(0,255,0),2)
-            cv2.circle(self.blobs_bgr,c2_center,5,(255,0,0),-1)
-            cv2.drawContours(self.blobs_bgr,[c3],0,(0,255,0),2)
-            cv2.circle(self.blobs_bgr,c3_center,5,(255,0,0),-1)
-            cv2.circle(self.blobs_bgr,self.centroid,5,(0,0,255),-1)
-            img_path = self.debug_imgs_path + 'blobs_bgr.png'
-            cv2.imwrite(img_path,self.blobs_bgr)
 
 
     def get_col_cropped(self,contours,og_color,idx):
@@ -185,9 +178,14 @@ class Cropper:
     def get_brightness_exp_val(self,spice_img_dict,idx):
         spice_bhist = self.get_brightness_histogram(spice_img_dict[idx])
         L = len(spice_bhist)
-        V = np.arange(0,L)
+        start = 1
+        V = np.arange(start,L)
         spice_bhist_peak = self.get_peak_of_histogram(spice_bhist)
-        spice_bhist_ev = self.expected_value(V,spice_bhist)
+        spice_bhist_ev = self.expected_value(V,spice_bhist[start:])
+
+        self.bhist_dict[idx] = spice_bhist
+        self.spice_bhist_ev_dict[idx] = spice_bhist_ev
+        self.spice_bhist_peak_dict[idx] = spice_bhist_peak
     
         return spice_bhist_ev
 
@@ -226,6 +224,10 @@ class Cropper:
 
         self.status = "FAIL"
         self.debug = True
+
+        self.spice_bhist_ev_dict = {}
+        self.spice_bhist_peak_dict = {}
+        self.bhist_dict = {}
 
         self.quadrant_dict = {}
 
@@ -270,7 +272,6 @@ class Cropper:
         cv2.imwrite(img_path,all_mask)
         return all_mask
 
-
     def clean_mask(self,mask):
         # Apply structuring element
         k = 10
@@ -307,7 +308,6 @@ class Cropper:
         elif com[0] > self.centroid[0] and com[1] > self.centroid[1]:
             return  3
         
-
     def get_brightness_histogram(self,img):
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         h, s, v = img_hsv[:,:,0], img_hsv[:,:,1], img_hsv[:,:,2]

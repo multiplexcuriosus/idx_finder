@@ -8,6 +8,7 @@ class HistogramLocalizer:
     def __init__(self,voc0_cropped,voc1_cropped) -> None:
         
         self.status = "success"
+        self.hist_img = None
 
         if voc0_cropped is None or voc1_cropped is None:
             print("HL: ERROR: img is None")
@@ -49,7 +50,7 @@ class HistogramLocalizer:
         print("voc0_hue_mean: "+str(voc0_hue_mean))
         print("voc1_hue_mean: "+str(voc1_hue_mean))
 
-        if self.debug or True:
+        if self.debug or False:
             #print("voc0_hue_peak_point: "+str(voc0_hue_peak_point))
             #print("voc1_hue_peak_point: "+str(voc1_hue_peak_point))
 
