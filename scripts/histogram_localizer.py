@@ -7,11 +7,15 @@ class HistogramLocalizer:
 
     def __init__(self,voc0_cropped,voc1_cropped) -> None:
         
+        self.status = "success"
+        self.hist_img = None
+
         if voc0_cropped is None or voc1_cropped is None:
             print("HL: ERROR: img is None")
+            self.status ="FAIL"
             return
 
-        self.debug = False
+        self.debug = True
 
         # Vinegar/Oil hue hist
         voc0_hue_hist = self.get_hue_histogram(voc0_cropped)
@@ -46,7 +50,7 @@ class HistogramLocalizer:
         print("voc0_hue_mean: "+str(voc0_hue_mean))
         print("voc1_hue_mean: "+str(voc1_hue_mean))
 
-        if self.debug or True:
+        if self.debug:
             #print("voc0_hue_peak_point: "+str(voc0_hue_peak_point))
             #print("voc1_hue_peak_point: "+str(voc1_hue_peak_point))
 
@@ -89,8 +93,6 @@ class HistogramLocalizer:
             print("Same hue mean")
 
 
-        if self.debug:
-            cv2.waitKey(0)
 
     def expected_value(self,values, weights):
         values = np.asarray(values)
