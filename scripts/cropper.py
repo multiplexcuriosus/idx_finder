@@ -238,10 +238,10 @@ class Cropper:
         self.spice0_col_img = None
         self.spice1_col_img = None
 
-        self.vocA_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocA.png'
-        self.vocB_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocB.png'
+        self.vocA_img_path = '/home/carmen/ros/catkin_ws/src/idx_finder/scripts/vocA.png'
+        self.vocB_img_path = '/home/carmen/ros/catkin_ws/src/idx_finder/scripts/vocB.png'
 
-        self.debug_imgs_path='/home/jau/ros/catkin_ws/src/idx_finder/scripts/debug_imgs/'
+        self.debug_imgs_path='/home/carmen/ros/catkin_ws/src/idx_finder/scripts/debug_imgs/'
 
 
     def remove_holes(self,mask_cv):

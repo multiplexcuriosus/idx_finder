@@ -19,7 +19,7 @@ class IDXFinder:
     def __init__(self):
         rospy.init_node('idx_finder_server')
 
-        self.use_ocr = True
+        self.use_ocr = False
 
         self.bridge = CvBridge()
         self.load_params()
@@ -157,6 +157,9 @@ class IDXFinder:
                 # Debug
                 if HL.hist_img is not None:
                     self.debug_histogram_pub.publish(self.bridge.cv2_to_imgmsg(HL.hist_img,encoding="rgb8"))
+                    print("Hist img published")
+                    self.debug_voc0_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocA_img))
+                    self.debug_voc1_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocB_img))
 
                 # Vinegar/Oil classification decision
                 if HL.voc0_has_higher_hue_peak:
