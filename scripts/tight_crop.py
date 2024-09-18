@@ -1,6 +1,6 @@
 import cv2
 
-idx = 3
+idx = 0
 path = '/home/jau/Desktop/debug_imgs/spice'+str(idx)+'_mask.png'
 img = cv2.imread(path)
 cv2.imshow("og img",img)
@@ -20,7 +20,7 @@ def tight_crop(img):
     
     k = 10
     cleaning_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k,k))
-    cropped_clean = cv2.morphologyEx(cropped_image, cv2.MORPH_CLOSE, cleaning_kernel)
+    cropped_clean = cv2.morphologyEx(cropped_image, cv2.MORPH_OPEN, cleaning_kernel)
     cv2.imshow("cropped_clean",cropped_clean)
     cv2.waitKey(0)
 

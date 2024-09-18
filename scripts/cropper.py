@@ -7,7 +7,7 @@ class Cropper:
     def __init__(self,og_color,og_mask,five_contours_found) -> None:
         
         # Init params
-        self.init()
+        self.initParams()
 
         if self.debug:
             print("og_color.shape: "+str(og_color.shape))
@@ -20,21 +20,46 @@ class Cropper:
         if og_mask is None:
             print("Cropper: ERROR: depth img  is None")
             return
+        
+        # Clean og mask
+        og_mask = self.clean_mask(mask=og_mask,k=15)
+        if self.debug:
+            img_path = self.debug_imgs_path + 'og_mask.png'
+            cv2.imwrite(img_path,og_mask)
 
          # Create all-bottles-mask
         all_bottles_mask = None
         if five_contours_found:
-            print("[IDXServer.Croppper] : Using 5-contour-approach")
             all_bottles_mask = self.get_all_mask(og_mask)
         else:
-            print("[IDXServer.Croppper] : Using thresh-approach")
+            og_mask_no_holes = self.remove_holes(og_mask)
+            if self.debug:
+                img_path = self.debug_imgs_path + 'idx_finder_og_mask_no_holes.png'
+                cv2.imwrite(img_path,og_mask_no_holes)
             og_color_hsv = cv2.cvtColor(og_color, cv2.COLOR_RGB2HSV)
             all_range = np.array([[0, 0, 200], [180, 255, 255]], dtype=np.uint16)
             all_bottles_mask = cv2.inRange(og_color_hsv, all_range[0], all_range[1])
-            all_bottles_mask = cv2.bitwise_and(all_bottles_mask, all_bottles_mask, mask=og_mask)
+            if self.debug:
+                img_path = self.debug_imgs_path + 'all_bottles_mask_inrange.png'
+                cv2.imwrite(img_path,all_bottles_mask)
+            all_bottles_mask = cv2.bitwise_and(all_bottles_mask, all_bottles_mask, mask=og_mask_no_holes)
+            if self.debug:
+                img_path = self.debug_imgs_path + 'all_bottles_mask_bitwise_and.png'
+                cv2.imwrite(img_path,all_bottles_mask)
+
+            # Cut away top 20% of all bottles mask to remove glare from top shelf plane
+            h,w = all_bottles_mask.shape
+            border = int(0.2*h)
+            all_bottles_mask[0:border,:] = 0
+            if self.debug:
+                img_path = self.debug_imgs_path + 'all_bottles_mask_top_20percent_cut_off.png'
+                cv2.imwrite(img_path,all_bottles_mask)
 
        
         self.all_bottles_mask = self.clean_mask(all_bottles_mask)
+        if self.debug:
+            img_path = self.debug_imgs_path + 'all_mask_clean.png'
+            cv2.imwrite(img_path,self.all_bottles_mask)
 
         # All color
         all_bottles_color = cv2.bitwise_and(og_color, og_color, mask=self.all_bottles_mask)
@@ -42,10 +67,20 @@ class Cropper:
         # Blob detection
         self.blobs_bgr = cv2.cvtColor(self.all_bottles_mask, cv2.COLOR_GRAY2BGR)
         contours, hier = cv2.findContours(self.all_bottles_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-        # Abort if no contours found        
-        if len(contours) == 0:
-            print("[IDXServer.Croppper] : No contours found! Aborting")
+        # Abort if no contours found 
+        num_cont = len(contours)    
+        print("Found "+str(num_cont)+" holes")      
+        if num_cont == 0:
+            print("[IDXServer.Croppper] : No holes found! Aborting")
             return
+        
+        four_holes_found = num_cont == 4
+        if four_holes_found:
+            print("[IDXServer.Croppper] : Using 4-hole-approach")
+        else:
+            print("[IDXServer.Croppper] : Using thresh-approach")
+
+
 
 
         # Contour processing
@@ -60,16 +95,26 @@ class Cropper:
         c2 = cntsSorted[2] # third largest contour
         c2_center = self.get_center_of_countour(c2)
 
-        c3 = cntsSorted[3] # fouth largest contour
-        c3_center = self.get_center_of_countour(c3)
+        if four_holes_found:
+            c3 = cntsSorted[3] # fourth largest contour
+            c3_center = self.get_center_of_countour(c3)
 
-        self.centroid = (int(np.average([c0_center[0],c1_center[0],c2_center[0],c3_center[0]])),
-                         int(np.average([c0_center[1],c1_center[1],c2_center[1],c3_center[1]])))
+            self.centroid = (int(np.average([c0_center[0],c1_center[0],c2_center[0],c3_center[0]])),
+                             int(np.average([c0_center[1],c1_center[1],c2_center[1],c3_center[1]])))
+        else:
+            self.centroid = (int(np.average([c0_center[0],c1_center[0],c2_center[0]])),
+                             int(np.average([c0_center[1],c1_center[1],c2_center[1]])))
 
         self.spice0_loc_idx = self.locate(c0_center)
         self.spice1_loc_idx = self.locate(c1_center)
         self.spice2_loc_idx = self.locate(c2_center)
-        self.spice3_loc_idx = self.locate(c3_center)
+        if four_holes_found:
+            self.spice3_loc_idx = self.locate(c3_center)
+        else:
+            self.spice3_loc_idx = list(self.all_loc_idxs.difference([self.spice0_loc_idx,
+                                                                     self.spice1_loc_idx,
+                                                                     self.spice2_loc_idx]))[0]
+
 
         # Key: spice, value: location idx
         spiceidx_to_locidx = {0: self.spice0_loc_idx,
@@ -86,29 +131,38 @@ class Cropper:
         # Key: spice, value: com
         spiceidx_to_com = {0: c0_center,
                            1: c1_center,
-                           2: c2_center,
-                           3: c3_center}
+                           2: c2_center}
+        if four_holes_found:
+            spiceidx_to_com[3] = c3_center
         
         # Cropped color imgs for each spice
         spice_img_dict = {0: self.get_color_frame_cropped(cntsSorted,og_color,0),
                           1: self.get_color_frame_cropped(cntsSorted,og_color,1),
-                          2: self.get_color_frame_cropped(cntsSorted,og_color,2),
-                          3: self.get_color_frame_cropped(cntsSorted,og_color,3)}
+                          2: self.get_color_frame_cropped(cntsSorted,og_color,2)}
+        if four_holes_found:
+            spice_img_dict[3] = self.get_color_frame_cropped(cntsSorted,og_color,3)
 
         # Brightness histogram expectation value for each spice
         bhist_evs = [(self.get_brightness_exp_val(spice_img_dict,0),0),
                      (self.get_brightness_exp_val(spice_img_dict,1),1),
-                     (self.get_brightness_exp_val(spice_img_dict,2),2),
-                     (self.get_brightness_exp_val(spice_img_dict,3),3)]
+                     (self.get_brightness_exp_val(spice_img_dict,2),2)]
+        if four_holes_found:
+            bhist_evs.append((self.get_brightness_exp_val(spice_img_dict,3),3))
 
-        print("bhist_evs: "+str(bhist_evs))
+
+        #print("bhist_evs: "+str(bhist_evs))
 
         bhist_evs_sorted = sorted(bhist_evs, key=lambda tu: tu[0])
         print("bhist_evs_sorted: "+str(bhist_evs_sorted))
 
         # Draw conclusions
-        pepper_loc_idx = spiceidx_to_locidx[bhist_evs_sorted[0][1]]
-        salt_loc_idx = spiceidx_to_locidx[bhist_evs_sorted[1][1]]
+        if four_holes_found:
+            pepper_loc_idx = spiceidx_to_locidx[bhist_evs_sorted[0][1]]
+            salt_loc_idx = spiceidx_to_locidx[bhist_evs_sorted[1][1]]
+        else:
+            pepper_loc_idx = self.spice3_loc_idx
+            salt_loc_idx = self.spice2_loc_idx
+
 
         self.quadrant_dict["pepper"] = pepper_loc_idx
         self.quadrant_dict["salt"] = salt_loc_idx
@@ -117,8 +171,7 @@ class Cropper:
 
         # PREPARE NEXT STAGE -------------------------------------------
         sp_loc_idxs = [pepper_loc_idx,salt_loc_idx]
-        all_loc_idxs = set([0,1,2,3])
-        ov_loc_idxs = list(all_loc_idxs.difference(sp_loc_idxs))
+        ov_loc_idxs = list(self.all_loc_idxs.difference(sp_loc_idxs))
         print("ov loc idxs: "+str(ov_loc_idxs))
         
         vocA_loc_idx = ov_loc_idxs[0]
@@ -138,18 +191,9 @@ class Cropper:
         self.cB_center = spiceidx_to_com[vocB_idx]
         
         if self.debug:
-            hist_img = self.createHistIMG(self.bhist_dict[0],
-                                          self.bhist_dict[1],
-                                          self.bhist_dict[2],
-                                          self.bhist_dict[3],
-                                          self.spice_bhist_peak_dict[0] ,
-                                          self.spice_bhist_peak_dict[1] ,
-                                          self.spice_bhist_peak_dict[2] ,
-                                          self.spice_bhist_peak_dict[3] ,
-                                          self.spice_bhist_ev_dict[0],
-                                          self.spice_bhist_ev_dict[1],
-                                          self.spice_bhist_ev_dict[2],
-                                          self.spice_bhist_ev_dict[3],)
+            hist_img = self.createHistIMG(self.bhist_dict,
+                                          self.spice_bhist_peak_dict ,
+                                          self.spice_bhist_ev_dict)
             img_path = self.debug_imgs_path + 'hist_img.png'
             cv2.imwrite(img_path,hist_img)
         
@@ -158,12 +202,6 @@ class Cropper:
         if self.debug:
             img_path = self.debug_imgs_path + 'og_color.png'
             cv2.imwrite(img_path,og_color)
-
-            img_path = self.debug_imgs_path + 'og_mask.png'
-            cv2.imwrite(img_path,og_mask)
-
-            img_path = self.debug_imgs_path + 'all_mask_clean.png'
-            cv2.imwrite(img_path,self.all_bottles_mask)
 
             img_path = self.debug_imgs_path + 'all_color.png'
             cv2.imwrite(img_path,all_bottles_color)
@@ -174,15 +212,22 @@ class Cropper:
         spice_mask = self.get_cont_mask(contour)
         spice_mask_bbox = self.crop_to_contour(contour,spice_mask)
         spice_color_bbox = self.crop_to_contour(contour,og_color)
-        print("spice_mask_bbox shape: "+str(spice_mask_bbox.shape))
-        print("spice_color_bbox shape: "+str(spice_color_bbox.shape))
+        if self.debug:
+            img_path = self.debug_imgs_path +'spice'+str(idx)+'_mask.png'
+            cv2.imwrite(img_path,spice_mask)
+
+            img_path = self.debug_imgs_path +'spice'+str(idx)+'_mask_bbox.png'
+            cv2.imwrite(img_path,spice_mask_bbox)
+
+            img_path = self.debug_imgs_path +'spice'+str(idx)+'_color_bbox.png'
+            cv2.imwrite(img_path,spice_color_bbox)
 
 
         spice_mask_tight,og_color_tight = self.tight_crop(spice_mask_bbox,spice_color_bbox)
         #print("spice mask tight dtype: "+str(spice_mask_tight.dtype))
         #print("og_color_tight tight dtype: "+str(og_color_tight.dtype))
-        print("spice mask tight shape: "+str(spice_mask_tight.shape))
-        print("og_color_tight shape: "+str(og_color_tight.shape))
+        #print("spice mask tight shape: "+str(spice_mask_tight.shape))
+        #print("og_color_tight shape: "+str(og_color_tight.shape))
         spice_col_tight = cv2.bitwise_and(og_color_tight, og_color_tight, mask=spice_mask_tight)
 
         if self.debug:
@@ -199,34 +244,22 @@ class Cropper:
         spice_mask_bbox_bgr = cv2.cvtColor(spice_mask_bbox_binary,cv2.COLOR_GRAY2BGR)
 
         h,w,_ = spice_mask_bbox_bgr.shape
-        row_start = int(h*0.0)
+        row_start = int(h*0.2)
         row_end = int(h*1.0)
         col_start = int(w*0.0)
         col_end = int(w*1.0)
         cropped_mask = spice_mask_bbox_bgr[row_start:row_end,col_start:col_end]
         cropped_col = spice_color_bbox[row_start:row_end,col_start:col_end]
-        #cv2.imshow("cropped",cropped_image)
-        #cv2.waitKey(0)
         
         k = 5
         cleaning_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k,k))
-        cropped_mask_clean = cv2.morphologyEx(cropped_mask, cv2.MORPH_CLOSE, cleaning_kernel)
+        cropped_mask_clean = cv2.morphologyEx(cropped_mask, cv2.MORPH_OPEN, cleaning_kernel)
 
-        #cv2.imshow("cropped_clean",cropped_clean)
-        #cv2.waitKey(0)
-
-        k = 15
-        erosion_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k,k))
+        k = 10
+        erosion_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k,k))
         cropped_mask_clean_eroded = cv2.erode(cropped_mask_clean, erosion_kernel)
 
         cropped_mask_clean_eroded_gray = cv2.cvtColor(cropped_mask_clean_eroded,cv2.COLOR_BGR2GRAY)
-        print('cropped_mask_clean_eroded_gray shape: '+str(cropped_mask_clean_eroded_gray.shape))
-        
-        #th,eroded_binary = cv2.threshold(eroded_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-        #print('eroded_binary shape: '+str(eroded_binary.shape))
-        #cv2.imshow("eroded",eroded)
-        #cv2.waitKey(0)
-        #
 
         return cropped_mask_clean_eroded_gray.astype(np.uint8),cropped_col
 
@@ -249,23 +282,39 @@ class Cropper:
         weights = np.asarray(weights)
         return (np.dot(values,weights)) / weights.sum()
 
-    def createHistIMG(self,h0,h1,h2,h3,p0,p1,p2,p3,m0,m1,m2,m3):
+    def createHistIMG(self,bhists,peaks,evs):
+        h0 = bhists[0]
+        h1 = bhists[1] 
+        h2 = bhists[2]
+        p0 = peaks[0]
+        p1 = peaks[1]
+        p2 = peaks[2]
+        m0 = evs[0]
+        m1 = evs[1]
+        m2 = evs[2]
+
         fig, ax = plt.subplots(1)
         
         ax.plot(h0, color='blue', label="s0")
         ax.plot(h1, color='red', label="s1")
         ax.plot(h2, color='green', label="s2")
-        ax.plot(h3, color='orange', label="s3")
-        
+
         ax.plot(p0[0],p0[1],'o',color='blue')
         ax.plot(p1[0],p1[1],'o',color='red')
         ax.plot(p2[0],p2[1],'o',color='green')
-        ax.plot(p3[0],p3[1],'o',color='orange')
 
         plt.axvline(x=m0, color='blue', linestyle='--')
         plt.axvline(x=m1, color='red', linestyle='--')
         plt.axvline(x=m2, color='green', linestyle='--')
-        plt.axvline(x=m3, color='orange', linestyle='--')
+
+
+        if 3 in bhists and 3 in peaks and 3 in evs:
+            h3 = bhists[3]
+            ax.plot(h3, color='orange', label="s3")
+            p3 = peaks[3]
+            ax.plot(p3[0],p3[1],'o',color='orange')
+            m3 = evs[3]
+            plt.axvline(x=m3, color='orange', linestyle='--')
 
         ax.legend(loc="upper right")
         #plt.show()
@@ -275,15 +324,16 @@ class Cropper:
         return hist_img
 
 
-    def init(self):
+    def initParams(self):
 
         self.status = "FAIL"
         self.debug = True
 
+        self.all_loc_idxs = set([0,1,2,3])
+
         self.spice_bhist_ev_dict = {}
         self.spice_bhist_peak_dict = {}
         self.bhist_dict = {}
-
         self.quadrant_dict = {}
 
         self.ov_loc_idxs = None # Oil vinegar idx
@@ -293,10 +343,10 @@ class Cropper:
         self.spice0_col_img = None
         self.spice1_col_img = None
 
-        self.vocA_img_path = '/home/carmen/ros/catkin_ws/src/idx_finder/scripts/vocA.png'
-        self.vocB_img_path = '/home/carmen/ros/catkin_ws/src/idx_finder/scripts/vocB.png'
+        self.vocA_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocA.png'
+        self.vocB_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocB.png'
 
-        self.debug_imgs_path='/home/carmen/ros/catkin_ws/src/idx_finder/scripts/debug_imgs/'
+        self.debug_imgs_path='/home/jau/ros/catkin_ws/src/idx_finder/scripts/debug_imgs/'
 
 
     def remove_holes(self,mask_cv):
@@ -327,18 +377,23 @@ class Cropper:
         cv2.imwrite(img_path,all_mask)
         return all_mask
 
-    def clean_mask(self,mask):
+    def clean_mask_close(self,mask,k=5):
         # Apply structuring element
-        k = 10
         cleaning_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k,k))
-        morph = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cleaning_kernel)
+        clean = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cleaning_kernel)
+        return clean 
+    
+    def clean_mask(self,mask,k=5):
+        # Apply structuring element
+        cleaning_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k,k))
+        clean = cv2.morphologyEx(mask, cv2.MORPH_OPEN, cleaning_kernel)
         '''
         k = 10
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k,k))
         morph = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         '''
         #morph = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        return morph
+        return clean    
 
     def crop_to_contour(self,cont,col_img):
         x,y,w,h = cv2.boundingRect(cont) # a - angle
