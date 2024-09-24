@@ -1,4 +1,4 @@
 index_finder:
-  HOME: "/home/jau/ros/catkin_ws/src/idx_finder/" 
-  brightness_threshold: 200
+  HOME: "/home/jau/ros/catkin_ws/src/idx_finder/" # path to ros package
+  brightness_threshold: 200 # In case not 4 masks are found, what value should be used for the brightness thresholding in the Cropper
   debug: True

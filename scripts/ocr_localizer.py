@@ -1,6 +1,10 @@
 import easyocr
 
 class OCRLocalizer:
+    '''
+    The OCRLocalizer runs the OCR algorithm from the easyocr package on an image specified by its file path.
+    It searches certain tokens associated with either oil or vinegar and reports its findings via the self.status variable.
+    '''
     def __init__(self,img_path,debug) -> None:
         self.reader = easyocr.Reader(['en'])
         self.result = self.reader.readtext(img_path)
@@ -15,15 +19,15 @@ class OCRLocalizer:
                              "VINEGA","INEGAR",
                              "VINEGAR"]
         
-        # Get found tokens from result
+        # Extract found tokens from result
         for (bbox, text, prob) in self.result:
             self.found_tokens[text] = prob
             #print(f'Text: {text}, Probability: {prob}')
-        print("Found tokens: "+str(self.found_tokens.keys()))
+        print("[IDXServer.OCRLocalizer] : Found tokens: "+str(self.found_tokens.keys()))
 
         # Status
         self.status = "FAIL"
-        p_thresh = 0.1
+        p_thresh = 0.1 # Minimum certainty probability (experimentally determined)
 
         # Check if oil token was found
         for ot in self.oil_dict:
@@ -34,7 +38,7 @@ class OCRLocalizer:
                     p = self.found_tokens[ft]
                     if p > p_thresh:
                         if debug:
-                            print("Oil token found: "+str(ft)+" with p="+"%.2f" % p)
+                            print("[IDXServer.OCRLocalizer] : Oil token found: "+str(ft)+" with p="+"%.2f" % p)
                         self.status = "oil"
                         return
         
@@ -48,7 +52,7 @@ class OCRLocalizer:
                         p = self.found_tokens[ft]
                         if p > p_thresh:
                             if debug:
-                                print("Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
+                                print("[IDXServer.OCRLocalizer] : Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
                             self.status = "vinegar"
                             return
 

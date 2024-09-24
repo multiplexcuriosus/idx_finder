@@ -59,28 +59,18 @@ class Cropper:
             print("[IDXServer.Croppper] : Using thresh-approach")
 
         # Use blob detection to get tightly cropped color images of the four bottles (3 if thresholding was used)
-        self.create_spice_images(og_color,contours,four_holes_found)
+        self.create_tight_spice_images(og_color,contours,four_holes_found)
 
-        # Brightness histogram expectation value for each spice
-        bhist_evs = [(self.get_brightness_exp_val(self.spice_img_dict,0),0),
-                     (self.get_brightness_exp_val(self.spice_img_dict,1),1),
-                     (self.get_brightness_exp_val(self.spice_img_dict,2),2)]
-        if four_holes_found:
-            bhist_evs.append((self.get_brightness_exp_val(self.spice_img_dict,3),3))
-
-        bhist_evs_sorted = sorted(bhist_evs, key=lambda tu: tu[0])
-        if self.debug:
-            print("[IDXServer.Croppper] : bhist_evs: "+str(bhist_evs))
-            print("[IDXServer.Croppper] : bhist_evs_sorted: "+str(bhist_evs_sorted))
+        # Create brightness histogram for each image
+        bhist_evs_sorted = self.get_brightness_histogram_means(four_holes_found)
 
         # Draw conclusions
-        if four_holes_found:
+        if four_holes_found: # Localize salt and pepper based on brightness histogram
             pepper_loc_idx = self.spiceidx_to_locidx[bhist_evs_sorted[0][1]]
             salt_loc_idx = self.spiceidx_to_locidx[bhist_evs_sorted[1][1]]
-        else:
+        else: # Localize salt and pepper by assuming that the pepper  was "thresholded away" and salt is the smallest blob
             pepper_loc_idx = self.spice3_loc_idx
             salt_loc_idx = self.spice2_loc_idx
-
 
         self.quadrant_dict["pepper"] = pepper_loc_idx
         self.quadrant_dict["salt"] = salt_loc_idx
@@ -150,7 +140,21 @@ class Cropper:
         self.spice0_col_img = None
         self.spice1_col_img = None
 
-    def create_spice_images(self,og_color,contours,four_holes_found):
+    def get_brightness_histogram_means(self,four_holes_found):
+        # Brightness histogram expectation value for each spice
+        bhist_evs = [(self.get_brightness_exp_val(self.spice_img_dict,0),0),
+                     (self.get_brightness_exp_val(self.spice_img_dict,1),1),
+                     (self.get_brightness_exp_val(self.spice_img_dict,2),2)]
+        if four_holes_found:
+            bhist_evs.append((self.get_brightness_exp_val(self.spice_img_dict,3),3))
+
+        bhist_evs_sorted = sorted(bhist_evs, key=lambda tu: tu[0])
+        if self.debug:
+            print("[IDXServer.Croppper] : bhist_evs: "+str(bhist_evs))
+            print("[IDXServer.Croppper] : bhist_evs_sorted: "+str(bhist_evs_sorted))
+        return bhist_evs_sorted
+
+    def create_tight_spice_images(self,og_color,contours,four_holes_found):
         
         # Contour processing
         cntsSorted = sorted(contours, key=lambda x: -cv2.contourArea(x))
