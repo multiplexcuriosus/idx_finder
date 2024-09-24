@@ -1,7 +1,7 @@
 import easyocr
 
 class OCRLocalizer:
-    def __init__(self,img_path) -> None:
+    def __init__(self,img_path,debug) -> None:
         self.reader = easyocr.Reader(['en'])
         self.result = self.reader.readtext(img_path)
         self.found_tokens = {}
@@ -33,7 +33,8 @@ class OCRLocalizer:
                 if ftl == otl or ftl in otl or otl in ftl:
                     p = self.found_tokens[ft]
                     if p > p_thresh:
-                        print("Oil token found: "+str(ft)+" with p="+"%.2f" % p)
+                        if debug:
+                            print("Oil token found: "+str(ft)+" with p="+"%.2f" % p)
                         self.status = "oil"
                         return
         
@@ -46,7 +47,8 @@ class OCRLocalizer:
                     if vtl == ftl or ftl in vtl or vtl in ftl:
                         p = self.found_tokens[ft]
                         if p > p_thresh:
-                            print("Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
+                            if debug:
+                                print("Vinegar token found: "+str(ft)+" with p="+"%.2f" % p)
                             self.status = "vinegar"
                             return
 

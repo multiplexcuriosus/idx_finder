@@ -20,7 +20,7 @@ class IndexFinder:
         '''
         The IndexFinder receives a FindIndexRequest and returns a FindIndexResponse.
         He first uses the request-mask to get cropped out color images from all spice bottles.
-        For each of those four color images (voc0-3) he creates a brightness histogram.
+        For each of those four color images (vocA-3) he creates a brightness histogram.
         Each spice has a spice-index (just an enumeration) and each quadrant has a "location-index". 
         The spice, whose cropped out color image has the lowest brightness-mean in the brightness-histogram is assumed to be pepper.
         Analogously the second lowest brightness-mean is associated with salt. 
@@ -35,7 +35,6 @@ class IndexFinder:
 
         self.load_params()
 
-        # Set up callbacks
         self.shutdown_sub = rospy.Subscriber("/shutdown_spice_up",Bool,self.shutdown_cb)
 
         # Debugging
@@ -43,8 +42,8 @@ class IndexFinder:
         self.debug_mask_pub = rospy.Publisher("debug_mask", Image, queue_size=1)
         self.debug_all_mask_pub = rospy.Publisher("debug_all_mask", Image, queue_size=1)
         self.debug_histogram_pub = rospy.Publisher("debug_histogram", Image, queue_size=1)
-        self.debug_voc0_pub = rospy.Publisher("/debug_voc0", Image, queue_size=1)
-        self.debug_voc1_pub = rospy.Publisher("/debug_voc1", Image, queue_size=1)
+        self.debug_vocA_pub = rospy.Publisher("/debug_vocA", Image, queue_size=1)
+        self.debug_vocB_pub = rospy.Publisher("/debug_vocB", Image, queue_size=1)
         self.debug_blob_pub = rospy.Publisher("debug_blob", Image, queue_size=1)
         
         # Start service
@@ -63,19 +62,19 @@ class IndexFinder:
         target_mask_has_five_contours = request.has_five_contours
         print("[IndexFinder] : Received request for:", target_spice)
 
-        color_frame = self.ros_to_cv2(request.color_frame)
+        color_img = self.ros_to_cv2(request.color_frame)
 
         if not self.cropper_is_initialized:
             original_mask_cv = self.ros_to_cv2(request.mask,desired_encoding="passthrough").astype(np.uint8)
             original_mask_cv = cv2.cvtColor(original_mask_cv,cv2.COLOR_BGR2GRAY)
         
-            self.cropper = Cropper(color_frame,original_mask_cv,target_mask_has_five_contours,self.debug)
+            self.cropper = Cropper(color_img,original_mask_cv,target_mask_has_five_contours,self.debug)
             if self.cropper.status == "FAIL":
                 print("[IndexFinder] : Cropper failed. Aborting!")
                 return response
             
             self.cropper_is_initialized = True
-            self.quadrant_dict = self.cropper.quadrant_dict
+            self.quadrant_dict = self.cropper.quadrant_dict # Save location-indices from salt & pepper, which the Cropper localized
             print("[IndexFinder] : Cropper initialized")
             
         print("[IndexFinder] : Qdict: " + str(self.quadrant_dict))
@@ -122,8 +121,7 @@ class IndexFinder:
                     print("[IndexFinder] : OCR failed for VOCB")
 
             if not self.use_ocr or not ocr_success: # Try histogram approach
-                # HL is agnostic to approach : 0 == A, 1 == B
-                HL = HistogramLocalizer(self.cropper.vocA_img,self.cropper.vocB_img)
+                HL = HistogramLocalizer(self.cropper.vocA_img,self.cropper.vocB_img,self.debug)
                 if HL.status == "FAIL":
                     return response
                 
@@ -131,11 +129,13 @@ class IndexFinder:
                 if HL.hist_img is not None:
                     self.debug_histogram_pub.publish(self.bridge.cv2_to_imgmsg(HL.hist_img,encoding="rgb8"))
                     print("Hist img published")
-                    self.debug_voc0_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocA_img,encoding="rgb8"))
-                    self.debug_voc1_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocB_img,encoding="rgb8"))
+                    self.debug_vocA_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocA_img,encoding="rgb8"))
+                    self.debug_vocB_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocB_img,encoding="rgb8"))
+                    img_path = self.debug_imgs_path + "hue_histogram.png"
+                    cv2.imwrite(img_path,HL.hist_img)
 
                 # Vinegar/Oil classification decision
-                if HL.voc0_has_higher_hue_mean:
+                if HL.vocA_has_higher_hue_mean:
                     oil_com = self.cropper.cB_center
                     vinegar_com = self.cropper.cA_center
                 else:
@@ -144,8 +144,8 @@ class IndexFinder:
             self.coms_dict["oil"] = oil_com
             self.coms_dict["vinegar"] = vinegar_com
 
-            self.quadrant_dict["oil"] = self.cropper.locate(self.coms_dict["oil"])
-            self.quadrant_dict["vinegar"] = self.cropper.locate(self.coms_dict["vinegar"])
+            self.quadrant_dict["oil"] = self.cropper.get_spice_location_index_by_com(self.coms_dict["oil"])
+            self.quadrant_dict["vinegar"] = self.cropper.get_spice_location_index_by_com(self.coms_dict["vinegar"])
 
 
             # Finalize response
@@ -159,17 +159,15 @@ class IndexFinder:
     def load_params(self):
 
         self.debug = rospy.get_param("index_finder/debug")
+        self.home = rospy.get_param("index_finder/HOME")
+        self.debug_imgs_path = self.home + "debug_imgs/"
 
         self.use_ocr = True
 
         self.bridge = CvBridge()
 
-        #self.home = rospy.get_param("index_finder/HOME")
-        #self.voc0_img_path = self.home +'temp_data/last_voc0.png' # It seems as if absolute path is needed
-        #self.voc1_img_path = self.home +'temp_data/last_voc1.png'
-
-        self.quadrant_dict = {} # Which contour center is in which quadrant
-        self.coms_dict = {} # Center of mass (com) for each blob in bottles mask 
+        self.quadrant_dict = {} # key: spice_name, value: location-index
+        self.coms_dict = {} # key: spice_name, value: blob center of mass 
 
         self.cropper = None
         self.cropper_is_initialized = False

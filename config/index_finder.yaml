@@ -1,3 +1,4 @@
 index_finder:
   HOME: "/home/jau/ros/catkin_ws/src/idx_finder/" 
+  brightness_threshold: 200
   debug: True
