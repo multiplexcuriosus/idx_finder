@@ -43,8 +43,8 @@ class IndexFinder:
         self.debug_mask_pub = rospy.Publisher("debug_mask", Image, queue_size=1)
         self.debug_all_mask_pub = rospy.Publisher("debug_all_mask", Image, queue_size=1)
         self.debug_histogram_pub = rospy.Publisher("debug_histogram", Image, queue_size=1)
-        self.debug_voc0_pub = rospy.Publisher("debug_voc0", Image, queue_size=1)
-        self.debug_voc1_pub = rospy.Publisher("debug_voc1", Image, queue_size=1)
+        self.debug_voc0_pub = rospy.Publisher("/debug_voc0", Image, queue_size=1)
+        self.debug_voc1_pub = rospy.Publisher("/debug_voc1", Image, queue_size=1)
         self.debug_blob_pub = rospy.Publisher("debug_blob", Image, queue_size=1)
         
         # Start service
@@ -130,23 +130,17 @@ class IndexFinder:
                 # Debug
                 if HL.hist_img is not None:
                     self.debug_histogram_pub.publish(self.bridge.cv2_to_imgmsg(HL.hist_img,encoding="rgb8"))
+                    print("Hist img published")
+                    self.debug_voc0_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocA_img,encoding="rgb8"))
+                    self.debug_voc1_pub.publish(self.bridge.cv2_to_imgmsg(self.cropper.vocB_img,encoding="rgb8"))
 
                 # Vinegar/Oil classification decision
-                if HL.voc0_has_higher_hue_peak:
+                if HL.voc0_has_higher_hue_mean:
                     oil_com = self.cropper.cB_center
                     vinegar_com = self.cropper.cA_center
-                elif HL.voc1_has_higher_hue_peak:
+                else:
                     oil_com = self.cropper.cA_center
                     vinegar_com = self.cropper.cB_center
-                else:
-                    print("[IndexFinder] : Same hue peak location --> deciding via mean")
-                    if HL.voc0_has_higher_hue_mean:
-                        oil_com = self.cropper.cB_center
-                        vinegar_com = self.cropper.cA_center
-                    elif HL.voc1_has_higher_hue_mean:
-                        oil_com = self.cropper.cA_center
-                        vinegar_com = self.cropper.cB_center
-
             self.coms_dict["oil"] = oil_com
             self.coms_dict["vinegar"] = vinegar_com
 
