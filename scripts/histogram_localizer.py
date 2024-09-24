@@ -5,7 +5,7 @@ from scipy.signal import find_peaks
 
 class HistogramLocalizer:
 
-    def __init__(self,voc0_cropped,voc1_cropped) -> None:
+    def __init__(self,voc0_cropped,voc1_cropped,debug) -> None:
         
         self.status = "success"
         self.hist_img = None
@@ -15,7 +15,7 @@ class HistogramLocalizer:
             self.status ="FAIL"
             return
 
-        self.debug = False
+        self.debug = debug
 
         # Vinegar/Oil hue hist
         voc0_hue_hist = self.get_hue_histogram(voc0_cropped)

@@ -1,0 +1,3 @@
+index_finder:
+  HOME: "/home/jau/ros/catkin_ws/src/idx_finder/" 
+  debug: True

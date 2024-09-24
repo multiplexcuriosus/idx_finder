@@ -1,25 +1,35 @@
 import numpy as np
 import cv2
+import rospy
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 
 class Cropper:
-    def __init__(self,og_color,og_mask,five_contours_found) -> None:
+    def __init__(self,og_color,og_mask,five_contours_found,debug) -> None:
         
         # Init params
-        self.init()
+        self.init_params()
+        self.debug = debug
 
+        '''
         if self.debug:
             print("og_color.shape: "+str(og_color.shape))
             print("og_mask.shape: "+str(og_mask.shape))
-
+        '''
+        
         if og_color is None:
             print("Cropper: ERROR: color img is None")
             return
+        if self.debug:
+            img_path = self.debug_imgs_path + 'og_color.png'
+            cv2.imwrite(img_path,og_color)
         
         if og_mask is None:
             print("Cropper: ERROR: depth img  is None")
             return
+        if self.debug:
+            img_path = self.debug_imgs_path + 'og_mask.png'
+            cv2.imwrite(img_path,og_mask)
 
          # Create all-bottles-mask
         all_bottles_mask = None
@@ -35,6 +45,9 @@ class Cropper:
 
        
         self.all_bottles_mask = self.clean_mask(all_bottles_mask)
+        if self.debug:
+            img_path = self.debug_imgs_path + 'all_bottles_mask_clean.png'
+            cv2.imwrite(img_path,self.all_bottles_mask)
 
         # All color
         all_bottles_color = cv2.bitwise_and(og_color, og_color, mask=self.all_bottles_mask)
@@ -76,7 +89,7 @@ class Cropper:
                               1: self.spice1_loc_idx,
                               2: self.spice2_loc_idx,
                               3: self.spice3_loc_idx}
-        print("spiceidx_to_locidx: "+str(spiceidx_to_locidx))
+        print("[IDXServer.Croppper] : spiceidx_to_locidx: "+str(spiceidx_to_locidx))
         
         # Key: spice, value: com
         spiceidx_to_com = {0: c0_center,
@@ -96,10 +109,10 @@ class Cropper:
                      (self.get_brightness_exp_val(spice_img_dict,2),2),
                      (self.get_brightness_exp_val(spice_img_dict,3),3)]
 
-        print("bhist_evs: "+str(bhist_evs))
+        print("[IDXServer.Croppper] : bhist_evs: "+str(bhist_evs))
 
         bhist_evs_sorted = sorted(bhist_evs, key=lambda tu: tu[0])
-        print("bhist_evs_sorted: "+str(bhist_evs_sorted))
+        print("[IDXServer.Croppper] : bhist_evs_sorted: "+str(bhist_evs_sorted))
 
         # Draw conclusions
         pepper_idx = spiceidx_to_locidx[bhist_evs_sorted[0][1]]
@@ -130,8 +143,14 @@ class Cropper:
         self.cA_center = spiceidx_to_com[vocA_idx]
         self.cB_center = spiceidx_to_com[vocB_idx]
 
-        
+
+        # debug:
         if self.debug:
+            print("[IDXServer.Croppper] : saving debug imgs")
+
+            img_path = self.debug_imgs_path + 'all_color.png'
+            cv2.imwrite(img_path,all_bottles_color)
+
             hist_img = self.createHistIMG(self.bhist_dict[0],
                                           self.bhist_dict[1],
                                           self.bhist_dict[2],
@@ -146,21 +165,6 @@ class Cropper:
                                           self.spice_bhist_ev_dict[3],)
             img_path = self.debug_imgs_path + 'hist_img.png'
             cv2.imwrite(img_path,hist_img)
-        
-
-        # debug:
-        if self.debug:
-            img_path = self.debug_imgs_path + 'og_color.png'
-            cv2.imwrite(img_path,og_color)
-
-            img_path = self.debug_imgs_path + 'og_mask.png'
-            cv2.imwrite(img_path,og_mask)
-
-            img_path = self.debug_imgs_path + 'all_mask_clean.png'
-            cv2.imwrite(img_path,self.all_bottles_mask)
-
-            img_path = self.debug_imgs_path + 'all_color.png'
-            cv2.imwrite(img_path,all_bottles_color)
 
 
     def get_col_cropped(self,contours,og_color,idx):
@@ -220,10 +224,15 @@ class Cropper:
         return hist_img
 
 
-    def init(self):
+    def init_params(self):
 
         self.status = "FAIL"
-        self.debug = True
+
+
+        self.home = rospy.get_param("index_finder/HOME")
+        self.debug_imgs_path = self.home + 'debug_imgs/'
+        self.vocA_img_path = self.home+'temp_data/vocA.png'
+        self.vocB_img_path = self.home+'temp_data/vocB.png'
 
         self.spice_bhist_ev_dict = {}
         self.spice_bhist_peak_dict = {}
@@ -238,10 +247,7 @@ class Cropper:
         self.spice0_col_img = None
         self.spice1_col_img = None
 
-        self.vocA_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocA.png'
-        self.vocB_img_path = '/home/jau/ros/catkin_ws/src/idx_finder/scripts/vocB.png'
 
-        self.debug_imgs_path='/home/jau/ros/catkin_ws/src/idx_finder/scripts/debug_imgs/'
 
 
     def remove_holes(self,mask_cv):

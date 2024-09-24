@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS system thread)
 
 add_service_files(
-  FILES IDXAcquisition.srv
+  FILES FindIndex.srv
 )
 
 generate_messages(DEPENDENCIES std_msgs sensor_msgs)
