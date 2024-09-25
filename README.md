@@ -15,7 +15,8 @@ The `index_finder_server` receives a `FindIndex` request, which contains a color
 Thus for the rest of the Cropper-pipeline, a distinction is made between thresholding-approach & 4-hole-approach, since they make different assumptions about how many blobs are present in the `all_bottles_mask`.
 
 ### 4-hole-approach
-![sa_slide_extraction-4](https://github.com/user-attachments/assets/123fbb49-8d50-4082-89a6-78d806a3646c)
+Branch of Cropper-pipeline, usecase: `has_five_contours == True` or `all_bottles_mask` has 4 holes.
+![sa_slide_extraction (1)-4](https://github.com/user-attachments/assets/4ca0650f-4486-4bf5-982d-f2b570d9fb6e)
 1. In `get_all_bottles_mask`: From the information given in the `FindIndexRequest` the `all_bottles_mask` is obtained in the `get_mask_of_holes`-method. This is done with simple mask operations (inversion, bitwise_and). From now on it is assumed that there are four blobs in the `all_bottles_mask`.
 2. The `all_bottles_color` img is created by bitwise-and of the `all_bottles_mask` and `og_color` img.
 3. The `spice_color_bbox` and `spice_col_tight` imgs are created with the `create_tight_spice_images`-method.
@@ -23,6 +24,7 @@ Thus for the rest of the Cropper-pipeline, a distinction is made between thresho
 5. The salt-pepper classification is made based on the means from `get_brightness_histogram_means`.
 
 ### Thresh-approach
+Branch of Cropper-pipeline, usecase: `has_five_contours == False`
 ![sa_slide_extraction-5](https://github.com/user-attachments/assets/44413717-0e95-4656-a05b-c084d974ae0f)
 1. In `get_all_bottles_mask`: A brightness threshold is applied to `og_color` and the result is bitwise anded with `og_mask_no_holes` to obtain the `all_bottles_mask`.  From now on it is assumed that there are three blobs in the `all_bottles_mask`.
 2. The `all_bottles_color` img is created by bitwise-and of the `all_bottles_mask` and `og_color` img.
