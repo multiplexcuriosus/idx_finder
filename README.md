@@ -18,6 +18,11 @@ Thus for the rest of the Cropper-pipeline, a distinction is made between thresho
 
 ### 4-hole-approach
 ![sa_slide_extraction-4](https://github.com/user-attachments/assets/7e2f8815-7cf9-4dbe-9b8c-99bbe5e49744)
+1. From the information given in the `FindIndexRequest` the `all_bottles_mask` is obtained in the `get_mask_of_holes`-method.
+2. The `all_bottles_color` img is created by bitwise-and of the `all_bottles_mask` and `og_color` img.
+3. & 4. The `spice_color_bbox` and `spice_col_tight` imgs are created with the `create_tight_spice_images`-method.
+5.  The brightness-histogram-means are computed in the `get_brightness_histogram_means`-method.
+6.  The salt-pepper classification is made based on the means from `get_brightness_histogram_means`.  
 ### Thresh-approach
 ![sa_slide_extraction-5](https://github.com/user-attachments/assets/04e27a41-a48c-42c6-9785-6dbbdc426fc0)
 
