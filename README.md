@@ -1,3 +1,6 @@
+markdown_extensions:
+  - sane_lists
+
 # The idx_finder node
 ## Overview
 The `idx_finder` communicates to the spice_up_coordinator through the `FindIndex` service.
