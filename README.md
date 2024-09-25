@@ -8,6 +8,9 @@ The idx_finder contains three modules:
 
 The following diagram gives an overview over the information flow:
 ![sa_slide_extraction-2](https://github.com/user-attachments/assets/2a42cc32-e6af-4621-adc9-8cda157343b8)
+The Cropper does some pre-processing, finds the salt- & pepper-location-indices and passes on cropped imgs of oil and vinegar to the OCRLocalizer.
+If the OCRLocalizer succeeds in localizing oil and vinegar, this information is directly returned to the `spice_up_action_server`. 
+If not, the cropped images are passed on to the HistogramLocalizer. The HistogramLocalizer always comes to a conclusion about the localization of oil and vinegar, which is then returned to the `spice_up_action_server`.
 
 ## Parameters in parameter file
 The `index_finder.yaml` file contains the following parameters:
