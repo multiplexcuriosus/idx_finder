@@ -43,5 +43,23 @@ The location-index ({0,1,2,3}) denotes the quadrant a spice can be in. The spice
 Origin of spice-index: Contour detection is done on the `all_bottles_mask`, i.e 3-4 contours are extracted from the blobs.
 The spice beneath contour0 is refered to as spice0 and so on. Genereally spice0 and spice1 correspond to oil and vinegar, since those (mostly) have the largest blobs and the output of the contour-search is ordered by size (largest first).
 
+## OCRLocalizer
+The `index_finder_server` instantiates two OCRLocalizers, one for each `spice_col_tight` img the Cropper returns.  
+
+Wrapper for the `easyocr` package. The wrapper allows to specify string-tokens to be searched in an image (henceforth called `oil-token` or `vinegar-token`. More precisely, these tokens are compared to the tokens which the `easyocr.Reader` finds in the image, which he stores in the `result` variable. All the tokens in `result` have an associated certainty score between 0-1. The wrapper currently defines a match as: An  `oil-token` or `vinegar-token` token is contained (case-angnostic) in one of the `result` tokens or the other way around.  
+
+Example: Suppose the `oil-tokens` are "OIL","OI","IL","O". If `result` contains e.g a single "O" with certainty score > 0.1, the OCRLocalizer returns "OIL" as result.
+
+## Histogram-Localizer
+The `index_finder_server` instantiates one HistogramLocalizer, with the two `spice_col_tight` imgs the Cropper returns.
+The HistogramLocalizer then creates a hue histogram of the two `spice_col_tight` imgs.
+
+        It creates a hue histogram and normalizes it, such that different bottle patch sizes have no influence on the hue distribution.
+        For ease of visual interpretation, the two distributions are also normalized to the same peak height. 
+        The two color imgs, which each either depicts oil or vinegar, are refered to as vocA & vocB (voc -> vinegar-oil-color)
+        
+
+
+
 
 
