@@ -9,6 +9,12 @@ The idx_finder contains three modules:
 The following diagram gives an overview over the information flow:
 ![sa_slide_extraction-2](https://github.com/user-attachments/assets/2a42cc32-e6af-4621-adc9-8cda157343b8)
 
+## Parameters in parameter file
+The `index_finder.yaml` file contains the following parameters:
+* `HOME` : Insert here the path to the ros package home directory, e.g "/home/jau/ros/catkin_ws/src/idx_finder/"
+* `brightness_threshold` : Insert here the brightness threshold for the Cropper-thresholding-approach
+* `debug` : bool : set to True to generate debug_imgs 
+
 ## Cropper
 The `index_finder_server` receives a `FindIndex` request, which contains a color-img, a mask and the information of whether or not the mask contains 5 contours or not (`has_five_contours`). If `has_five_contours == True`, the Cropper continues with the 4-hole-approach, else, with the thresholding-approach
 
