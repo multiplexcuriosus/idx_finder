@@ -53,10 +53,9 @@ Example: Suppose the `oil-tokens` are "OIL","OI","IL","O". If `result` contains 
 ## Histogram-Localizer
 The `index_finder_server` instantiates one HistogramLocalizer, with the two `spice_col_tight` imgs the Cropper returns.
 The HistogramLocalizer then creates a hue histogram of the two `spice_col_tight` imgs.
-
-        It creates a hue histogram and normalizes it, such that different bottle patch sizes have no influence on the hue distribution.
-        For ease of visual interpretation, the two distributions are also normalized to the same peak height. 
-        The two color imgs, which each either depicts oil or vinegar, are refered to as vocA & vocB (voc -> vinegar-oil-color)
+The histogram is normalized (divided by sum of distribution data points), such that different bottle patch sizes have no influence on the hue distribution.
+For ease of visual interpretation, the two distributions are also normalized to the same peak height. 
+Inside the HistogramLocalizer the two `spice_col_tight` imgs are refered to as vocA & vocB (voc -> vinegar-oil-color)
         
 
 
