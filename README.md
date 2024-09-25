@@ -15,7 +15,7 @@ The `index_finder_server` receives a `FindIndex` request, which contains a color
 **Important: If the `all_bottles_mask` was obtained via thresholding, it is assumed that it only contains three blobs: vinegar, oil, salt. Pepper is assumed to have been suppressed by the thresholding.**  
 
 Thus for the rest of the Cropper-pipeline, a distinction is made between thresholding-approach & 4-hole-approach, since they make different assumptions about how many blobs are present in the `all_bottles_mask`.
-..
+
 ### 4-hole-approach
 ![sa_slide_extraction-4](https://github.com/user-attachments/assets/7e2f8815-7cf9-4dbe-9b8c-99bbe5e49744)
 ### Thresh-approach
