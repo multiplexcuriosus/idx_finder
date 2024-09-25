@@ -40,12 +40,6 @@ Branch of Cropper-pipeline, usecase: `has_five_contours == False`
 3. The pepper-location-index is assumed to be the "empty" quadrant in the `all_bottles_mask`. The salt-location-index is assumed to be the location-index of the smallest blob in the `all_bottles_mask`.
 4. & 5. The `spice_color_bbox` and `spice_col_tight` imgs are created with the `create_tight_spice_images`-method.
 
-## Spice-location-index vs. spice-index
-![sa_slide_extraction-6](https://github.com/user-attachments/assets/35ce1c53-4a76-4a2d-bddd-a9cafe3baf07)
-The location-index ({0,1,2,3}) denotes the quadrant a spice can be in. The spice-index stems from the order the `spice_col_tight` were obtained. 
-Origin of spice-index: Contour detection is done on the `all_bottles_mask`, i.e 3-4 contours are extracted from the blobs.
-The spice beneath contour0 is refered to as spice0 and so on. Genereally spice0 and spice1 correspond to oil and vinegar, since those (mostly) have the largest blobs and the output of the contour-search is ordered by size (largest first).
-
 ## OCRLocalizer
 The `index_finder_server` instantiates two OCRLocalizers, one for each `spice_col_tight` img the Cropper returns.  
 
@@ -59,6 +53,13 @@ The HistogramLocalizer then creates a hue histogram of the two `spice_col_tight`
 The histogram is normalized (divided by sum of distribution data points), such that different bottle patch sizes have no influence on the hue distribution.
 For ease of visual interpretation, the two distributions are also normalized to the same peak height. 
 Inside the HistogramLocalizer the two `spice_col_tight` imgs are refered to as vocA & vocB (voc -> vinegar-oil-color)
+
+## Spice-location-index vs. spice-index
+![sa_slide_extraction-6](https://github.com/user-attachments/assets/35ce1c53-4a76-4a2d-bddd-a9cafe3baf07)
+The location-index ({0,1,2,3}) denotes the quadrant a spice can be in. The spice-index stems from the order the `spice_col_tight` were obtained. 
+Origin of spice-index: Contour detection is done on the `all_bottles_mask`, i.e 3-4 contours are extracted from the blobs.
+The spice beneath contour0 is refered to as spice0 and so on. Genereally spice0 and spice1 correspond to oil and vinegar, since those (mostly) have the largest blobs and the output of the contour-search is ordered by size (largest first).
+
         
 
 
