@@ -6,7 +6,8 @@ This ReadMe is structured into:
 * **OCRLocalizer**
 * **Histogram-Localizer**
 * **Configuration**
-* **Testing** 
+* **Testing**
+ 
 Note that installation and setup are covered in the [spice_up_coordinator Readme](https://github.com/multiplexcuriosus/spice_up_coordinator/blob/master/README.md). 
 
 ## Overview
