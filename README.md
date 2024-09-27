@@ -68,7 +68,7 @@ The spice beneath contour0 is refered to as spice0 and so on. Genereally spice0 
 ## Configuration
 
 The `idx_finder/config/index_finder.yaml` file contains the following parameters:
-* `index_finder/HOME` : Insert here the path to the ros package home directory, e.g "/home/jau/ros/catkin_ws/src/idx_finder/"
+* `index_finder/HOME` : Insert here the path to the ros package home directory, e.g "/home/<username>/ros/catkin_ws/src/idx_finder/"
 * `index_finder/brightness_threshold` : Insert here the brightness threshold for the Cropper-thresholding-approach
 * `index_finder/debug` : bool : set to True to generate debug_imgs         
 
