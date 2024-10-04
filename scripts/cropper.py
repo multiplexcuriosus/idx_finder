@@ -116,7 +116,7 @@ class Cropper:
         self.status = "FAIL"
 
         self.home = rospy.get_param("index_finder/HOME")
-        self.debug_imgs_path = self.home + 'debug_imgs/'
+        self.debug_imgs_path = self.home + '/scripts/debug_imgs/'
         self.vocA_img_path = self.home+'temp_data/vocA.png'
         self.vocB_img_path = self.home+'temp_data/vocB.png'
 
@@ -365,15 +365,18 @@ class Cropper:
 
         if 3 in bhists and 3 in peaks and 3 in evs:
             h3 = bhists[3]
-            ax.plot(h3, color='orange', label="s3")
+            ax.plot(h3, color='pink', label="s3")
             p3 = peaks[3]
-            ax.plot(p3[0],p3[1],'o',color='orange')
+            ax.plot(p3[0],p3[1],'o',color='pink')
             m3 = evs[3]
-            plt.axvline(x=m3, color='orange', linestyle='--')
+            plt.axvline(x=m3, color='pink', linestyle='--')
 
+        plt.xlabel("Brightness")
+        plt.ylabel("N pixels")
+        plt.yticks([]) 
         ax.legend(loc="upper right")
         #plt.show()
-        fig.canvas.draw()
+        fig.canvas.draw()   
         hist = np.array(fig.canvas.renderer.buffer_rgba())
         hist_img = cv2.cvtColor(hist, cv2.COLOR_RGBA2RGB)
         return hist_img

@@ -63,6 +63,9 @@ class HistogramLocalizer:
             plt.axvline(x=vocA_hue_mean, color='blue', linestyle='--',label="mean")
             plt.axvline(x=vocB_hue_mean, color='red', linestyle='--',label="mean")
             ax.legend(loc="upper right")
+            plt.xlabel("Hue")
+            plt.ylabel("N pixels")
+            plt.yticks([]) 
             #plt.show() -> Don't, this will make things crash
             fig.canvas.draw()
             hist = np.array(fig.canvas.renderer.buffer_rgba())
