@@ -37,11 +37,6 @@ class HistogramLocalizer:
         vocA_hue_hist /= (vocA_hist_sum)
         vocB_hue_hist /= (vocB_hist_sum)
 
-        # Make the two hist distributions have equal height
-        fac = vocA_hue_peak_height/vocB_hue_peak_height
-        vocB_hue_hist *= fac
-        vocB_hue_peak_height *= fac
-
         # Compute expectation values of both histograms
         L = len(vocA_hue_hist)
         V = np.arange(1,L)
@@ -56,8 +51,8 @@ class HistogramLocalizer:
         if self.debug:
             # Create histogram image and save it
             fig, ax = plt.subplots(1)
-            ax.plot(vocA_hue_hist[1:], color='blue', label="Hue vocA")
-            ax.plot(vocB_hue_hist[1:], color='red', label="Hue vocB")
+            ax.plot(vocA_hue_hist[1:], color='blue', label="Hue sctA")
+            ax.plot(vocB_hue_hist[1:], color='red', label="Hue sctB")
             ax.plot(vocA_hue_peak_point[0],vocA_hue_peak_height,'o',color='blue')
             ax.plot(vocB_hue_peak_point[0],vocB_hue_peak_height,'o',color='red')
             plt.axvline(x=vocA_hue_mean, color='blue', linestyle='--',label="mean")
