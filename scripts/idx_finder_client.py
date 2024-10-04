@@ -24,7 +24,7 @@ class IDXFinder:
         mask_path = path + 'og_mask.png'
         color_path = path + 'og_color.png'
 
-        rospy.wait_for_service('idx_finder_server')
+        rospy.wait_for_service('find_index_service')
 
         # Create test request
         target_spice = "salt"
@@ -40,7 +40,7 @@ class IDXFinder:
         idx_request.target_spice = target_spice
         idx_request.mask = mask_msg
         idx_request.color_frame = color_msg
-        idx_acquisition_service_handle = rospy.ServiceProxy('idx_finder_server', IDXAcquisition)
+        idx_acquisition_service_handle = rospy.ServiceProxy('find_index_service', IDXAcquisition)
         print("[IDXFinderClient] : Requesting target spice IDX")
         idx_acquisition_service_response = idx_acquisition_service_handle(idx_request)
         

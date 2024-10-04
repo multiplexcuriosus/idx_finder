@@ -116,7 +116,7 @@ class Cropper:
         self.status = "FAIL"
 
         self.home = rospy.get_param("index_finder/HOME")
-        self.debug_imgs_path = self.home + '/scripts/debug_imgs/'
+        self.debug_imgs_path = self.home + 'scripts/debug_imgs/'
         self.vocA_img_path = self.home+'temp_data/vocA.png'
         self.vocB_img_path = self.home+'temp_data/vocB.png'
 

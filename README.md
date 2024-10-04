@@ -1,4 +1,15 @@
 # The idx_finder node
+
+This ReadMe is structured into:
+* **Overview**
+* **Cropper**
+* **OCRLocalizer**
+* **Histogram-Localizer**
+* **Configuration**
+* **Testing**
+ 
+Note that installation and setup are covered in the [spice_up_coordinator Readme](https://github.com/multiplexcuriosus/spice_up_coordinator/blob/master/README.md). 
+
 ## Overview
 The `idx_finder` communicates to the spice_up_coordinator through the `FindIndex` service.
 The idx_finder contains three modules:
@@ -11,12 +22,6 @@ The following diagram gives an overview over the information flow:
 The Cropper does some pre-processing, finds the salt- & pepper-location-indices and passes on cropped imgs of oil and vinegar to the OCRLocalizer.
 If the OCRLocalizer succeeds in localizing oil and vinegar, this information is directly returned to the `spice_up_action_server`. 
 If not, the cropped images are passed on to the HistogramLocalizer. The HistogramLocalizer always comes to a conclusion about the localization of oil and vinegar, which is then returned to the `spice_up_action_server`.
-
-## Parameters in parameter file
-The `index_finder.yaml` file contains the following parameters:
-* `HOME` : Insert here the path to the ros package home directory, e.g "/home/jau/ros/catkin_ws/src/idx_finder/"
-* `brightness_threshold` : Insert here the brightness threshold for the Cropper-thresholding-approach
-* `debug` : bool : set to True to generate debug_imgs 
 
 ## Cropper
 The `index_finder_server` receives a `FindIndex` request, which contains a color-img, a mask and the information of whether or not the mask contains 5 contours or not (`has_five_contours`). If `has_five_contours == True`, the Cropper continues with the 4-hole-approach, else, with the thresholding-approach
@@ -60,9 +65,23 @@ The location-index ({0,1,2,3}) denotes the quadrant a spice can be in. The spice
 Origin of spice-index: Contour detection is done on the `all_bottles_mask`, i.e 3-4 contours are extracted from the blobs.
 The spice beneath contour0 is refered to as spice0 and so on. Genereally spice0 and spice1 correspond to oil and vinegar, since those (mostly) have the largest blobs and the output of the contour-search is ordered by size (largest first).
 
-        
+## Configuration
+
+The `idx_finder/config/index_finder.yaml` file contains the following parameters:
+* `index_finder/HOME` : Insert here the path to the ros package home directory, e.g "/home/<username>/ros/catkin_ws/src/idx_finder/"
+* `index_finder/brightness_threshold` : Insert here the brightness threshold for the Cropper-thresholding-approach
+* `index_finder/debug` : bool : set to True to generate debug_imgs         
 
 
+## Testing
+### create_mask_service
+The `find_index_service` can be tested by running:  
+```
+rosrun idx_finder idx_finder_server.py # Terminal 1
+rosrun idx_finder idx_finder_client.py # Terminal 2
+```
+In the file `create_mask_server.py`, the following variables need to be adjusted:  
+* `path`
 
 
 
